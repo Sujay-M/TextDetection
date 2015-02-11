@@ -42,9 +42,9 @@ def CCAnalysis(CC,no,stats):
 		image, contours, hierarchy = cv2.findContours(mask.copy(),cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 		area = stats.item(i,4)
 		aspectRatio = stats.item(i,2)/stats.item(i,3)
-		if area>5000 or area<50:
+		if area>MAX_AREA or area<MIN_AREA:
 			continue		
-		if aspectRatio>2:
+		if aspectRatio>MAX_ASPECT_RATIO:
 			continue		
 		convex_hull = cv2.convexHull(contours[0])
 		convex_area = cv2.contourArea(convex_hull)
@@ -52,14 +52,14 @@ def CCAnalysis(CC,no,stats):
 			solidity = area/float(convex_area)
 		else:
 			solidity = 0
-		if solidity<.4:
+		if solidity<MIN_SOLIDITY:
 			continue
 		ellipse = cv2.fitEllipse(contours[0])
 		(center,axes,orientation) = ellipse
 		majoraxis_length = max(axes)
 		minoraxis_length = min(axes)
 		eccentricity = np.sqrt(1-(minoraxis_length/majoraxis_length)**2)
-		if eccentricity>.995:
+		if eccentricity>MIN_ECCENTRICITY:
 			continue
 		finalMask = finalMask|mask
 	return finalMask
@@ -67,16 +67,16 @@ def CCAnalysis(CC,no,stats):
 '''
 Simple Display function
 '''
-def display(img,winName='img',maxWidth=1280,maxHeight=720):
+def display(img,winName='img'):
 	"Display function"
 	winHeight = height
 	winWidth = width
 	ratio = float(winHeight)/winWidth
-	if winHeight>maxHeight:
-		winHeight = maxHeight
+	if winHeight>MAX_HEIGHT:
+		winHeight = MAX_HEIGHT
 		winWidth = int(winHeight/ratio)
-	if winWidth>maxWidth:
-		winWidth = maxWidth
+	if winWidth>MAX_WIDTH:
+		winWidth = MAX_WIDTH
 		winHeight = int(winWidth*ratio)
 	cv2.namedWindow(winName)
 	cv2.imshow(winName,cv2.resize(img,(winWidth,winHeight)))
@@ -141,6 +141,13 @@ if __name__ == '__main__':
 		sys.exit(1)
 
 	height,width = img.shape
+	MAX_AREA = 10000
+	MIN_AREA = 50
+	MAX_ASPECT_RATIO = 2
+	MIN_SOLIDITY = .4
+	MIN_ECCENTRICITY = .995
+	MAX_WIDTH = 1280
+	MAX_HEIGHT = 720
 	display(img)	
 	detected = detectText(img)
 	display(detected)
