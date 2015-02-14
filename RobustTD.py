@@ -45,6 +45,8 @@ def CCAnalysis(CC,no,stats):
 		if area>MAX_AREA or area<MIN_AREA:
 			continue		
 		if aspectRatio>MAX_ASPECT_RATIO:
+			continue
+		if len(contours[0])<5:
 			continue		
 		convex_hull = cv2.convexHull(contours[0])
 		convex_area = cv2.contourArea(convex_hull)
@@ -84,6 +86,24 @@ def display(img,winName='img'):
 	cv2.destroyAllWindows()
 
 '''
+Takes the mser detected region and does a connected component analysis to remove the connections between different regions
+'''
+def MserAnalysis(mser,img):
+	'Analyzes mser region properties to segment connected regions'
+	no,CC,stats,Cen = cv2.connectedComponentsWithStats(mser)
+	newMask = np.zeros(mser.shape,np.uint8)
+	for i in range(1,no):
+		Index = np.where(CC==i)		
+		mean = np.mean(img[Index])
+		roi = img[stats.item(i,1):stats.item(i,1)+stats.item(i,3),stats.item(i,0):stats.item(i,0)+stats.item(i,2)]
+		ret2,th = cv2.threshold(roi,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+		if mean>ret2:
+			newMask[stats.item(i,1):stats.item(i,1)+stats.item(i,3),stats.item(i,0):stats.item(i,0)+stats.item(i,2)]=th
+		else:
+			newMask[stats.item(i,1):stats.item(i,1)+stats.item(i,3),stats.item(i,0):stats.item(i,0)+stats.item(i,2)]=cv2.bitwise_not(th)
+	return newMask
+
+'''
 Main function that returns the regions of interest(text)
 '''
 def detectText(img):
@@ -93,6 +113,7 @@ def detectText(img):
 	for points in regions:
 		for point in points:
 			mask.itemset(point[1],point[0],255)
+	display(mask)
 	'''
 	smoothedInput = cv2.GaussianBlur(img, (7,7), math.sqrt(2))
 	edges = cv2.Canny(smoothedInput, 120, 120)
@@ -104,10 +125,11 @@ def detectText(img):
 	MserAndCannyGrown = growEdges(MserAndCanny,gradAngle,2)
 	MserAndCannyGrown = np.uint8(np.absolute(MserAndCannyGrown))
 	'''
-	se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
-	gradient = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, se)
-	edgeEnhancedMserMask = (255 - gradient)&mask
-	#display(edgeEnhancedMserMask)
+	# se = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+	# gradient = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, se)
+	# edgeEnhancedMserMask = (255 - gradient)&mask
+	edgeEnhancedMserMask = MserAnalysis(mask,img)
+	display(edgeEnhancedMserMask)
 	no,CC,stats,Cen = cv2.connectedComponentsWithStats(edgeEnhancedMserMask)
 	new = CCAnalysis(CC,no,stats)
 	#display(new)
@@ -124,6 +146,7 @@ def detectText(img):
 		if np.std(strokeWidths[Index])/np.mean(strokeWidths[Index])>0.35:
 			continue
 		newer = newer|mask
+	# display(newer)
 	se1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(50,50))
 	se2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
 	im1 = cv2.morphologyEx(newer, cv2.MORPH_CLOSE, se1)
@@ -132,7 +155,7 @@ def detectText(img):
 
 if __name__ == '__main__':
 	try: path = sys.argv[1]		
-	except: path = './DataSet/text.png'
+	except: path = './DataSet/text1.png'
 	try: DarkonLight = int(sys.argv[2])
 	except: DarkonLight = 1
 	img = cv2.imread(path,0)
