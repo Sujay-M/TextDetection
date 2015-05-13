@@ -155,7 +155,7 @@ def detectText(img):
 
 if __name__ == '__main__':
 	try: path = sys.argv[1]		
-	except: path = './DataSet/text1.png'
+	except: path = './DataSet/text.png'
 	try: DarkonLight = int(sys.argv[2])
 	except: DarkonLight = 1
 	img = cv2.imread(path,0)

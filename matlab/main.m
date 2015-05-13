@@ -1,0 +1,22 @@
+clc;clear all;
+MAX_AREA = 10000;
+MIN_AREA = 50;
+MAX_ASPECT_RATIO = 2;
+MIN_SOLIDITY = .4;
+MIN_ECCENTRICITY = .995;
+path = '../DataSet/poster.jpg';
+colorImage = imread(path);
+grayImage = rgb2gray(colorImage);
+mserRegions = detectMSERFeatures(grayImage,'RegionAreaRange',[MIN_AREA MAX_AREA]);
+mserRegionsPixels = vertcat(cell2mat(mserRegions.PixelList));
+mserMask = false(size(grayImage));
+ind = sub2ind(size(mserMask), mserRegionsPixels(:,2), mserRegionsPixels(:,1));
+mserMask(ind) = true;
+newMask = mserAnalysis(mserMask,grayImage);
+figure; imshowpair(mserMask, newMask, 'montage');
+% regionFilteredTextMask = CCAnalysis(newMask);
+% figure,imshow(regionFilteredTextMask);
+strokeWidthImage = swtChenAltered(newMask);
+figure; imshow(strokeWidthImage);
+caxis([0 max(max(strokeWidthImage))]); axis image, colormap('jet'), colorbar;
+title('Visualization of text candidates stroke width')
